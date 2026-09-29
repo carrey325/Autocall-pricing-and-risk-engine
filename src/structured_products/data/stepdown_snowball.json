@@ -1,0 +1,24 @@
+{
+  "product": {
+    "template": "stepdown_snowball",
+    "parameters": {
+      "reference_spot": 100.0,
+      "notional": 1000.0,
+      "maturity_days": 252,
+      "knock_in_ratio": 0.8,
+      "first_knock_out_ratio": 1.03,
+      "last_knock_out_ratio": 0.92,
+      "coupon_rate": 0.18
+    }
+  },
+  "market": {
+    "spots": [100.0],
+    "rate": 0.03,
+    "dividend_yields": [0.0],
+    "volatilities": [0.2]
+  },
+  "engines": {
+    "mc": {"n_paths": 20000, "seed": 7},
+    "pde": {"spot_grid_points": 401}
+  }
+}

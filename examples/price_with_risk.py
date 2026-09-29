@@ -2,10 +2,10 @@
 
 import json
 
-from structured_products import GreekConfig, PDEConfig, load_config, price
+from structured_products import GreekConfig, PDEConfig, load_example, price
 
 
-config = load_config("configs/classic_snowball.json")
+config = load_example("classic_snowball")
 result = price(
     config.product,
     config.market,

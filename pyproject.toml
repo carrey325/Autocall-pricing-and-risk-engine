@@ -1,14 +1,15 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "structured-products-pricer"
-version = "0.2.0"
-description = "Clean-room Monte Carlo and PDE pricing for autocallable notes and FCNs."
+dynamic = ["version"]
+description = "Monte Carlo and PDE pricing and risk analytics for autocallable notes and FCNs."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Carrey Chen" }]
 keywords = [
     "autocallable",
@@ -22,7 +23,6 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Financial and Insurance Industry",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -38,6 +38,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "build>=1.2,<2",
+    "twine>=6,<7",
     "coverage[toml]>=7,<8",
     "pytest>=8,<10",
 ]
@@ -46,7 +48,19 @@ dev = [
 structured-products-pricer = "structured_products.cli:main"
 
 [tool.setuptools.packages.find]
+where = ["src"]
 include = ["structured_products*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "structured_products._version.__version__"}
+
+[tool.setuptools.package-data]
+structured_products = ["py.typed", "data/*.json"]
+
+[project.urls]
+Homepage = "https://github.com/carrey325/Autocall-pricing-and-risk-engine"
+Documentation = "https://github.com/carrey325/Autocall-pricing-and-risk-engine/blob/main/docs/API.md"
+Issues = "https://github.com/carrey325/Autocall-pricing-and-risk-engine/issues"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

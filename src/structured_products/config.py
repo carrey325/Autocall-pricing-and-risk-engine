@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, fields
 from inspect import signature
+from importlib.resources import files
 import json
 from math import isfinite
 from pathlib import Path
@@ -142,7 +143,29 @@ def _strict_builder(template: str, parameters: dict[str, Any]) -> StructuredNote
 
 
 def load_config(path: str | Path) -> ResolvedConfig:
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    """Read a caller-supplied JSON configuration file."""
+    return config_from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
+
+
+def list_examples() -> tuple[str, ...]:
+    """Names of the six example configurations shipped with the package."""
+    return tuple(sorted(
+        item.name[:-5] for item in files("structured_products").joinpath("data").iterdir()
+        if item.name.endswith(".json")
+    ))
+
+
+def load_example(name: str) -> ResolvedConfig:
+    """Load a built-in example without depending on the working directory."""
+    names = list_examples()
+    if name not in names:
+        raise ValueError(f"unknown example {name!r}; available examples: {', '.join(names)}")
+    text = files("structured_products").joinpath("data", name + ".json").read_text(encoding="utf-8")
+    return config_from_dict(json.loads(text))
+
+
+def config_from_dict(payload: dict[str, Any]) -> ResolvedConfig:
+    """Validate the same strict schema used by JSON configuration files."""
     if not isinstance(payload, dict):
         raise ValueError("configuration root must be an object")
     allowed_top = {"product", "market", "engines", "greeks"}

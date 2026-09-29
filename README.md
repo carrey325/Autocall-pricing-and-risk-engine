@@ -37,8 +37,8 @@ Crank–Nicolson PDE benchmark for single-asset products.
 
 ## Numerical Validation
 
-The project includes **128 automated tests**, **96% test coverage**, and CI across
-Python 3.10–3.13. Tests cover hand-calculated payoff paths, barrier-touch and
+The project includes numerical and API tests, a **90% minimum coverage gate**,
+and CI across Python 3.10–3.13. Tests cover hand-calculated payoff paths, barrier-touch and
 same-day event rules, Monte Carlo reproducibility, PDE grid refinement, and
 cross-engine comparisons.
 
@@ -55,31 +55,45 @@ inside the Monte Carlo 95% confidence interval. See
 
 ## Quick Start
 
+Install from this GitHub repository (Python 3.10–3.13):
+
 ~~~bash
-python -m pip install -e ".[dev]"
+python -m pip install "git+https://github.com/carrey325/Autocall-pricing-and-risk-engine.git@main"
 ~~~
 
-Price a Snowball and calculate its Greeks:
+Price a Snowball and calculate its Greeks from any directory:
 
 ~~~bash
-python main.py price --config configs/classic_snowball.json --method mc
+python -m structured_products price --example classic_snowball --method mc
 ~~~
 
 Both `price` and `run` return valuation and all Greeks as JSON. Use `--no-greeks`
-for valuation only. In Python, call `price(..., include_greeks=True)` and read
-`result.greeks`. See [RISK_ANALYTICS.md](RISK_ANALYTICS.md) for definitions,
-units, time-roll conventions, and a complete example.
+for valuation only. The `structured-products-pricer` console command provides
+the same interface; `--config path/to/config.json` accepts your own inputs.
+
+~~~python
+from structured_products import load_example, price
+
+config = load_example("classic_snowball")
+result = price(config.product, config.market, "pde", config.pde, include_greeks=True)
+print(result.present_value)
+print(result.greeks.vanna)
+~~~
+
+See the [API guide](docs/API.md), [tutorials](docs/TUTORIALS.md), and
+[risk conventions](RISK_ANALYTICS.md). Version **0.3.0rc1** is a GitHub development
+candidate; this project is not being published to PyPI.
 
 Compare Monte Carlo and PDE valuations:
 
 ~~~bash
-python main.py compare --config configs/classic_snowball.json
+python -m structured_products compare --example classic_snowball
 ~~~
 
 Solve for the fair coupon:
 
 ~~~bash
-python main.py fair-coupon --config configs/classic_snowball.json --method pde \
+python -m structured_products fair-coupon --example classic_snowball --method pde \
   --target-pv 1000 --lower 0.01 --upper 0.40
 ~~~
 

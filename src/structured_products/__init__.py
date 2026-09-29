@@ -1,4 +1,4 @@
-"""Clean-room structured-products pricing framework."""
+"""Public API for autocallable pricing and risk analytics."""
 
 from .builders import (
     make_butterfly_snowball,
@@ -13,7 +13,11 @@ from .builders import (
 )
 from .analytics import calculate_greeks, solve_fair_coupon
 from .enums import BasketRule, CouponRule, PricingMethod, SameDayPriority
-from .config import GreekConfig, MCConfig, PDEConfig, ResolvedConfig, load_config
+from .config import (
+    GreekConfig, MCConfig, PDEConfig, ResolvedConfig,
+    config_from_dict, list_examples, load_config, load_example,
+)
+from ._version import __version__
 from .market import MarketData
 from .pricing import price
 from .products import (
@@ -25,7 +29,6 @@ from .products import (
 )
 from .results import FairCouponResult, GreeksResult, PricingResult
 
-__version__ = "0.2.0"
 
 __all__ = [
     "AutocallFeature",
@@ -56,6 +59,9 @@ __all__ = [
     "make_worst_of_fcn",
     "make_worst_of_snowball",
     "load_config",
+    "load_example",
+    "list_examples",
+    "config_from_dict",
     "price",
     "solve_fair_coupon",
 ]

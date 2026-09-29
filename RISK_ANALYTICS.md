@@ -3,8 +3,8 @@
 `price` and `run` in the CLI calculate valuation and risk together:
 
 ```bash
-python main.py price --config configs/classic_snowball.json --method pde
-python main.py run --config configs/worst_of_snowball.json --method mc
+python -m structured_products price --example classic_snowball --method pde
+python -m structured_products run --example worst_of_snowball --method mc
 ```
 
 The JSON output has sibling `price` and `greeks` objects. `run` also includes the
@@ -15,9 +15,9 @@ Risk revaluation costs more than one valuation; the baseline PV is reused.
 ## Python API
 
 ```python
-from structured_products import GreekConfig, PDEConfig, load_config, price
+from structured_products import GreekConfig, PDEConfig, load_example, price
 
-config = load_config("configs/classic_snowball.json")
+config = load_example("classic_snowball")
 result = price(
     config.product, config.market, "pde", PDEConfig(spot_grid_points=1601),
     include_greeks=True,

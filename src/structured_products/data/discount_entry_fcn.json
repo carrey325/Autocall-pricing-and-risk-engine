@@ -1,0 +1,23 @@
+{
+  "product": {
+    "template": "discount_entry_fcn",
+    "parameters": {
+      "reference_spot": 100.0,
+      "notional": 1000.0,
+      "maturity_days": 252,
+      "knock_in_ratio": 0.8,
+      "strike_ratio": 0.95,
+      "coupon_rate": 0.14
+    }
+  },
+  "market": {
+    "spots": [95.0],
+    "rate": 0.03,
+    "dividend_yields": [0.0],
+    "volatilities": [0.22]
+  },
+  "engines": {
+    "mc": {"n_paths": 20000, "seed": 7},
+    "pde": {"spot_grid_points": 401}
+  }
+}

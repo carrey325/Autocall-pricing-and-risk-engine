@@ -10,12 +10,14 @@ import sys
 from typing import Any, Sequence
 
 from .analytics import calculate_greeks, solve_fair_coupon
-from .config import ResolvedConfig, load_config
+from .config import ResolvedConfig, list_examples, load_config, load_example
 from .pricing import price
 
 
 def _add_run_controls(parser: argparse.ArgumentParser, *, method: bool = True) -> None:
-    parser.add_argument("--config", required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--config", help="path to a JSON configuration")
+    source.add_argument("--example", choices=list_examples(), help="built-in configuration")
     if method:
         parser.add_argument("--method", choices=("mc", "pde"), default="mc")
     parser.add_argument("--paths", type=int)
@@ -26,6 +28,9 @@ def _add_run_controls(parser: argparse.ArgumentParser, *, method: bool = True) -
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="structured-products-pricer")
+    from ._version import __version__
+
+    parser.add_argument("--version", action="version", version=__version__)
     subparsers = parser.add_subparsers(dest="command", required=True)
     for name in ("run", "price", "greeks"):
         command = subparsers.add_parser(name)
@@ -136,7 +141,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     try:
         args = parser.parse_args(argv)
-        config = _overrides(load_config(args.config), args)
+        config = _overrides(
+            load_example(args.example) if args.example else load_config(args.config), args
+        )
         _write_output(_execute(config, args), args.output)
         return 0
     except (OSError, ValueError, TypeError, RuntimeError) as exc:

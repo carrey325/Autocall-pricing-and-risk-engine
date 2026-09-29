@@ -1,5 +1,18 @@
 # Numerical Validation
 
+## Package candidate verification
+
+The 0.3.0rc1 local Windows/Python 3.13 run passes 139 tests with 96% combined
+statement/branch coverage and no skips. CI retains source-suite coverage on
+Python 3.10–3.13 and checks wheel and source installations on Windows, Linux,
+and macOS with Python 3.10 and 3.13.
+
+Artifact checks run in fresh virtual environments outside the checkout. They
+exercise all six bundled presets, MC/PDE pricing, extended risk, fair coupon,
+both CLI entry points, version metadata, typing resources, and dependency
+consistency. Archive audits exclude local archives, notebooks, and caches.
+These are GitHub build checks only; no package-index publication is configured.
+
 ## Test strategy
 
 The suite starts with deterministic, hand-calculated paths for every payoff
