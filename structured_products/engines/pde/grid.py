@@ -20,5 +20,9 @@ def build_spot_grid(
         scales.append(reference * product.knock_in.barrier_ratio)
     if product.autocall:
         scales.extend(reference * value for value in product.autocall.barrier_ratios)
-    upper = config.upper_spot_multiple * max(scales)
+    upper = config.spot_grid_upper
+    if upper is None:
+        upper = config.upper_spot_multiple * max(scales)
+    elif upper <= max(scales):
+        raise ValueError("fixed spot grid upper bound must exceed spots and contract levels")
     return np.linspace(0.0, upper, config.spot_grid_points)

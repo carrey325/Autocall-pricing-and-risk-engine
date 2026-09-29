@@ -9,7 +9,7 @@ import numpy as np
 from ...config import PDEConfig
 from ...enums import CouponRule
 from ...market import MarketData
-from ...payoffs import evaluate_path
+from ...payoffs import _period_accrual, evaluate_path
 from ...products import StructuredNote
 from ...results import PricingResult
 from .grid import build_spot_grid
@@ -38,8 +38,7 @@ def _validate(product: StructuredNote, market: MarketData) -> None:
 
 
 def _periodic_coupon(product: StructuredNote, index: int) -> float:
-    previous = 0 if index == 0 else product.coupon.payment_days[index - 1]
-    accrual = (product.coupon.payment_days[index] - previous) / product.day_count
+    accrual = _period_accrual(product, index)
     return product.notional * product.coupon.rate_schedule[index] * accrual
 
 
@@ -65,7 +64,7 @@ def _redemption_values(
         values[eligible] += (
             product.notional
             * product.coupon.maturity_rate
-            * product.maturity_years
+            * product.coupon_maturity_years
         )
     return values
 
@@ -101,7 +100,7 @@ def _terminal_values(
         coupon = (
             product.notional
             * product.autocall.coupon_rates[index]
-            * product.maturity_years
+            * product.coupon_maturity_years
         )
         not_ki[mask] = principal + coupon
         ki[mask] = principal + coupon
@@ -140,7 +139,7 @@ def _apply_events(
         coupon = (
             product.notional
             * product.autocall.coupon_rates[index]
-            * day
+            * (product.elapsed_days + day)
             / product.day_count
         )
         not_ki[mask] = principal + coupon

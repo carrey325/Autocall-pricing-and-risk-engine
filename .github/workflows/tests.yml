@@ -36,10 +36,13 @@ jobs:
           python examples/price_classic_snowball.py
           python examples/price_standard_fcn.py
           python examples/price_worst_of.py
+          python examples/price_with_risk.py
 
       - name: Smoke-test CLI
         run: |
-          python main.py price --config configs/classic_snowball.json --method mc --paths 200
+          for config in configs/*.json; do
+            python main.py price --config "$config" --method mc --paths 200
+          done
           python main.py compare --config configs/classic_snowball.json --paths 1000 --grid-size 201
 
       - name: Enforce clean-room tracked files

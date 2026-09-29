@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any
 
@@ -39,6 +39,13 @@ class PricingResult(SerializableResult):
     expected_coupon_cashflow: float | None = None
     diagnostics: dict[str, Any] | None = None
     warnings: tuple[str, ...] = ()
+    greeks: GreeksResult | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = super().to_dict()
+        if self.greeks is not None:
+            payload["greeks"] = self.greeks.to_dict()
+        return payload
 
 
 @dataclass(frozen=True)
@@ -52,6 +59,29 @@ class GreeksResult(SerializableResult):
     rho: float
     correlation_sensitivity: float | None
     bumps: dict[str, float]
+    lambda_: tuple[float | None, ...] = ()
+    vanna: tuple[float, ...] = ()
+    vomma: tuple[float, ...] = ()
+    charm: tuple[float, ...] = ()
+    veta: tuple[float, ...] = ()
+    units: dict[str, str] = field(default_factory=dict)
+    diagnostics: dict[str, Any] = field(default_factory=dict)
+    warnings: tuple[str, ...] = ()
+
+    @property
+    def omega(self) -> tuple[float | None, ...]:
+        return self.lambda_
+
+    @property
+    def volga(self) -> tuple[float, ...]:
+        return self.vomma
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = super().to_dict()
+        payload["lambda"] = payload.pop("lambda_")
+        payload["omega"] = payload["lambda"]
+        payload["volga"] = payload["vomma"]
+        return payload
 
 
 @dataclass(frozen=True)

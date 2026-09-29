@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, fields
 from inspect import signature
 import json
+from math import isfinite
 from pathlib import Path
 from typing import Any, Callable
 
@@ -39,6 +40,7 @@ class PDEConfig:
     theta: float = 0.5
     interpolation: str = "linear"
     rannacher_smoothing: bool = True
+    spot_grid_upper: float | None = None
 
     def __post_init__(self) -> None:
         if self.spot_grid_points < 101 or self.spot_grid_points % 2 == 0:
@@ -51,6 +53,10 @@ class PDEConfig:
             raise ValueError("PDE theta must be in [0.5, 1.0]")
         if self.interpolation != "linear":
             raise ValueError("only linear PDE interpolation is supported")
+        if self.spot_grid_upper is not None and (
+            not isfinite(self.spot_grid_upper) or self.spot_grid_upper <= 0
+        ):
+            raise ValueError("fixed spot grid upper bound must be finite and positive")
 
 
 @dataclass(frozen=True)
@@ -62,14 +68,14 @@ class GreekConfig:
     correlation_bump: float = 0.01
 
     def __post_init__(self) -> None:
-        if (
-            self.relative_spot_bump <= 0
-            or self.volatility_bump <= 0
-            or self.rate_bump <= 0
-            or self.theta_days <= 0
-            or self.correlation_bump <= 0
-        ):
-            raise ValueError("Greek bumps must be positive")
+        bumps = (self.relative_spot_bump, self.volatility_bump,
+                 self.rate_bump, self.correlation_bump)
+        if any(not isfinite(bump) or bump <= 0 for bump in bumps):
+            raise ValueError("Greek bumps must be finite and positive")
+        if self.relative_spot_bump >= 1:
+            raise ValueError("relative spot bump must be less than one")
+        if isinstance(self.theta_days, bool) or not isinstance(self.theta_days, int) or self.theta_days <= 0:
+            raise ValueError("theta_days must be a positive integer")
 
 
 @dataclass(frozen=True)

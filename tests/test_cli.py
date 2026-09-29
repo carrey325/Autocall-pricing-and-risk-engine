@@ -90,3 +90,24 @@ def test_invalid_config_returns_nonzero(short_config: Path, capsys) -> None:
     short_config.write_text(json.dumps(payload), encoding="utf-8")
     assert main(["price", "--config", str(short_config)]) == 2
     assert "error:" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("command", ["price", "run"])
+@pytest.mark.parametrize("method", ["mc", "pde"])
+def test_pricing_includes_extended_risk_by_default(short_config, capsys, command, method):
+    assert main([command, "--config", str(short_config), "--method", method]) == 0
+    result = json.loads(capsys.readouterr().out)
+    risk = result["greeks"]
+    assert risk["base_price"] == result["price"]["present_value"]
+    for name in ("lambda", "omega", "vanna", "vomma", "volga", "charm", "veta"):
+        assert len(risk[name]) == 1
+
+
+def test_price_only_opt_out_accepts_zero_volatility(short_config, capsys):
+    payload = json.loads(short_config.read_text())
+    payload["market"]["volatilities"] = [0.0]
+    short_config.write_text(json.dumps(payload), encoding="utf-8")
+    assert main(["price", "--config", str(short_config), "--no-greeks"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert "greeks" not in result
+    assert result["price"]["present_value"] > 0

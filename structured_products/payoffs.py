@@ -19,7 +19,7 @@ def basket_performance(spots: np.ndarray, product: StructuredNote) -> np.ndarray
 
 
 def _period_accrual(product: StructuredNote, index: int) -> float:
-    previous = 0 if index == 0 else product.coupon.payment_days[index - 1]
+    previous = -product.coupon_accrued_days if index == 0 else product.coupon.payment_days[index - 1]
     return (product.coupon.payment_days[index] - previous) / product.day_count
 
 
@@ -81,7 +81,7 @@ def evaluate_path(path: np.ndarray, product: StructuredNote) -> PathEvaluation:
             coupon = (
                 product.notional
                 * product.autocall.coupon_rates[index]
-                * day
+                * (product.elapsed_days + day)
                 / product.day_count
             )
             if principal:
@@ -124,7 +124,7 @@ def evaluate_path(path: np.ndarray, product: StructuredNote) -> PathEvaluation:
                 coupon = (
                     product.notional
                     * product.coupon.maturity_rate
-                    * product.maturity_years
+                    * product.coupon_maturity_years
                 )
                 if coupon:
                     cashflows.append(Cashflow(day, coupon, "maturity_coupon"))
@@ -183,7 +183,7 @@ class VectorizedPayoffState:
         coupon = (
             self.product.notional
             * feature.coupon_rates[index]
-            * day
+            * (self.product.elapsed_days + day)
             / self.product.day_count
         )
         self.present_values[mask] += (principal + coupon) * self._discount(day)
@@ -244,7 +244,7 @@ class VectorizedPayoffState:
             coupon = (
                 self.product.notional
                 * self.product.coupon.maturity_rate
-                * self.product.maturity_years
+                * self.product.coupon_maturity_years
             )
             self.present_values[eligible] += coupon * self._discount(
                 self.product.maturity_days

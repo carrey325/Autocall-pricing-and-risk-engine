@@ -28,7 +28,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="structured-products-pricer")
     subparsers = parser.add_subparsers(dest="command", required=True)
     for name in ("run", "price", "greeks"):
-        _add_run_controls(subparsers.add_parser(name))
+        command = subparsers.add_parser(name)
+        _add_run_controls(command)
+        if name in ("run", "price"):
+            command.add_argument("--no-greeks", action="store_true",
+                                 help="return valuation only, without risk revaluations")
 
     fair = subparsers.add_parser("fair-coupon")
     _add_run_controls(fair)
@@ -71,14 +75,23 @@ def _write_output(payload: dict[str, Any], output: str | None) -> None:
 
 
 def _execute(config: ResolvedConfig, args: argparse.Namespace) -> dict[str, Any]:
-    if args.command == "price":
+    if args.command in ("price", "run"):
         result = price(
             config.product,
             config.market,
             args.method,
             _engine(config, args.method),
+            include_greeks=not args.no_greeks,
+            greek_config=config.greeks,
         )
-        return {"price": result.to_dict()}
+        valuation = result.to_dict()
+        risk = valuation.pop("greeks")
+        payload = {"price": valuation}
+        if risk is not None:
+            payload["greeks"] = risk
+        if args.command == "run":
+            payload["product"] = config.product.product_name
+        return payload
     if args.command == "greeks":
         result = calculate_greeks(
             config.product,
@@ -88,25 +101,6 @@ def _execute(config: ResolvedConfig, args: argparse.Namespace) -> dict[str, Any]
             config.greeks,
         )
         return {"greeks": result.to_dict()}
-    if args.command == "run":
-        pricing = price(
-            config.product,
-            config.market,
-            args.method,
-            _engine(config, args.method),
-        )
-        greeks = calculate_greeks(
-            config.product,
-            config.market,
-            args.method,
-            _engine(config, args.method),
-            config.greeks,
-        )
-        return {
-            "product": config.product.product_name,
-            "price": pricing.to_dict(),
-            "greeks": greeks.to_dict(),
-        }
     if args.command == "fair-coupon":
         result = solve_fair_coupon(
             config.product,

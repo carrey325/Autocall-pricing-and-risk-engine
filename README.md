@@ -14,6 +14,8 @@ Crank–Nicolson PDE benchmark for single-asset products.
 - Prices classic, wide, butterfly, dividend, and step-down Snowballs.
 - Prices standard, discount-entry, and worst-of FCNs.
 - Calculates fair coupon, Delta, Gamma, Vega, Theta, Rho, and correlation risk.
+- Adds per-underlying Lambda/Omega, Vanna, Vomma/Volga, Charm, and Veta
+  to pricing-time risk reports.
 - Reports Monte Carlo confidence intervals, KI/KO probabilities, and expected life.
 - Models product lifecycles with reusable knock-in, autocall, coupon, and
   redemption features instead of product-specific payoff scripts.
@@ -35,7 +37,7 @@ Crank–Nicolson PDE benchmark for single-asset products.
 
 ## Numerical Validation
 
-The project includes **91 automated tests**, **95% test coverage**, and CI across
+The project includes **128 automated tests**, **96% test coverage**, and CI across
 Python 3.10–3.13. Tests cover hand-calculated payoff paths, barrier-touch and
 same-day event rules, Monte Carlo reproducibility, PDE grid refinement, and
 cross-engine comparisons.
@@ -60,8 +62,13 @@ python -m pip install -e ".[dev]"
 Price a Snowball and calculate its Greeks:
 
 ~~~bash
-python main.py run --config configs/classic_snowball.json --method mc
+python main.py price --config configs/classic_snowball.json --method mc
 ~~~
+
+Both `price` and `run` return valuation and all Greeks as JSON. Use `--no-greeks`
+for valuation only. In Python, call `price(..., include_greeks=True)` and read
+`result.greeks`. See [RISK_ANALYTICS.md](RISK_ANALYTICS.md) for definitions,
+units, time-roll conventions, and a complete example.
 
 Compare Monte Carlo and PDE valuations:
 

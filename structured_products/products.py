@@ -85,6 +85,8 @@ class StructuredNote:
     autocall: AutocallFeature | None = None
     same_day_priority: SameDayPriority = SameDayPriority.KNOCK_OUT_FIRST
     metadata: tuple[tuple[str, str], ...] = ()
+    elapsed_days: int = 0
+    coupon_accrued_days: int = 0
 
     def __post_init__(self) -> None:
         refs = tuple(float(value) for value in self.reference_spots)
@@ -93,6 +95,12 @@ class StructuredNote:
             raise ValueError("reference spots must be positive")
         if self.notional <= 0 or self.maturity_days <= 0 or self.day_count <= 0:
             raise ValueError("notional, maturity_days, and day_count must be positive")
+        if (
+            not isinstance(self.elapsed_days, int)
+            or not isinstance(self.coupon_accrued_days, int)
+            or not 0 <= self.coupon_accrued_days <= self.elapsed_days
+        ):
+            raise ValueError("accrual days must be integers with 0 <= coupon_accrued_days <= elapsed_days")
         if self.issue_price is None:
             object.__setattr__(self, "issue_price", float(self.notional))
         elif self.issue_price <= 0:
@@ -117,6 +125,11 @@ class StructuredNote:
     @property
     def maturity_years(self) -> float:
         return self.maturity_days / self.day_count
+
+    @property
+    def coupon_maturity_years(self) -> float:
+        """Full issue-to-maturity accrual, including elapsed contractual days."""
+        return (self.elapsed_days + self.maturity_days) / self.day_count
 
     @property
     def product_name(self) -> str:

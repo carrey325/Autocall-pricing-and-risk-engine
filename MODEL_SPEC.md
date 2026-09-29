@@ -46,3 +46,19 @@ the same innovations for pricing, fair-coupon trials, and Greek bumps.
 The PDE engine solves two value states (alive/not knocked in and alive/knocked
 in) backward on a one-dimensional spot grid. It applies generic KI, KO, coupon,
 and maturity transforms on exact event days. Multi-asset PDE pricing is rejected.
+
+## Valuation-time risk
+
+Pricing can include Lambda/Omega, Vanna, Vomma/Volga, Charm, and Veta alongside
+the existing Greeks. These are finite-difference estimates on total PV, reported
+per underlying. PDE risk scenarios share the baseline spot grid upper bound;
+changing a market spot does not move the numerical domain.
+
+Time risk uses an explicit constant-spot daily-close scenario. Knock-in and
+autocall events are applied before shifting future schedules. Remaining value
+excludes cash already paid; a redeemed contract has no remaining exposure.
+`elapsed_days` preserves issue-to-redemption coupon accrual and
+`coupon_accrued_days` preserves the first remaining periodic coupon interval.
+Discounting still uses only remaining days. Charm and Veta are changes per
+elapsed trading day; Theta retains the total change over the configured horizon.
+See [RISK_ANALYTICS.md](RISK_ANALYTICS.md) for formulas and output conventions.
