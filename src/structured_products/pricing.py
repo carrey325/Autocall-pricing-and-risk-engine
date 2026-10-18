@@ -9,6 +9,7 @@ from .engines.mc import price_mc
 from .engines.pde import price_pde
 from .enums import PricingMethod
 from .market import MarketData
+from .models import PricingModel
 from .products import StructuredNote
 from .results import PricingResult
 
@@ -21,8 +22,11 @@ def price(
     *,
     include_greeks: bool = False,
     greek_config: GreekConfig | None = None,
+    model: PricingModel | None = None,
 ) -> PricingResult:
     """Price a note, optionally attaching per-asset risk to the same result."""
+    if include_greeks and model is not None:
+        raise ValueError('local model Greeks require the dedicated surface-risk API')
     try:
         selected = method if isinstance(method, PricingMethod) else PricingMethod(method.lower())
     except (AttributeError, ValueError) as exc:
@@ -31,12 +35,12 @@ def price(
         if engine_config is not None and not isinstance(engine_config, MCConfig):
             raise TypeError("MC pricing requires MCConfig")
         resolved = engine_config or MCConfig()
-        result = price_mc(product, market, resolved)
+        result = price_mc(product, market, resolved, model=model)
     else:
         if engine_config is not None and not isinstance(engine_config, PDEConfig):
             raise TypeError("PDE pricing requires PDEConfig")
         resolved = engine_config or PDEConfig()
-        result = price_pde(product, market, resolved)
+        result = price_pde(product, market, resolved, model=model)
     if include_greeks:
         from .analytics.greeks import _calculate_greeks
 

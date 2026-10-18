@@ -37,6 +37,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+plot = ["matplotlib>=3.7,<4"]
 dev = [
     "build>=1.2,<2",
     "twine>=6,<7",
@@ -55,7 +56,7 @@ include = ["structured_products*"]
 version = {attr = "structured_products._version.__version__"}
 
 [tool.setuptools.package-data]
-structured_products = ["py.typed", "data/*.json"]
+structured_products = ["py.typed", "data/*.json", "data/market_surface/*", "data/market_surface/templates/*"]
 
 [project.urls]
 Homepage = "https://github.com/carrey325/Autocall-pricing-and-risk-engine"

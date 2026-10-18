@@ -97,12 +97,25 @@ python -m structured_products fair-coupon --example classic_snowball --method pd
   --target-pv 1000 --lower 0.01 --upper 0.40
 ~~~
 
+## Market Surface Scripts
+
+SSVI calibration, Dupire local volatility, risk grids, stress revaluation and
+coupon/barrier comparisons are available through the Python API and CLI.
+
+~~~bash
+python -m pip install ".[plot]"
+python examples/run_market_research.py --output results/market-research-new
+~~~
+
+Check calibration gates and grid/bump sensitivity before using results. The bundled
+synthetic example does not establish real-market calibration or Greek convergence.
+
 ## Model Scope
 
-The current implementation assumes risk-neutral geometric Brownian motion with
-flat rates, dividend yields, volatilities, and correlations. Barrier monitoring
-uses daily closes and ACT/252 year fractions. Multi-asset worst-of products are
-supported through Monte Carlo only.
+The default uses geometric Brownian motion with flat rates and volatilities.
+Single-asset notes also support SSVI/Dupire local volatility with forward and
+discount curves. Barrier monitoring uses daily closes and ACT/252 year fractions.
+Multi-asset worst-of products use flat-model Monte Carlo.
 
 See [MODEL_SPEC.md](MODEL_SPEC.md) for contract conventions and
 [VALIDATION.md](VALIDATION.md) for numerical tests and limitations.

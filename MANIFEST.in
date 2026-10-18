@@ -8,7 +8,10 @@ prune old
 prune .venv
 prune .venv-rc030
 prune .pytest_tmp
+prune .pytest_research_check
 prune .pytest_cache
 prune dist
 prune build
+prune .superpowers
+prune results
 global-exclude *.ipynb *.pyc *.pyo .coverage

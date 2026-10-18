@@ -9,11 +9,12 @@ import numpy as np
 from ...config import PDEConfig
 from ...enums import CouponRule
 from ...market import MarketData
+from ...models import PricingModel, checked_local_vol, validate_model
 from ...payoffs import _period_accrual, evaluate_path
 from ...products import StructuredNote
 from ...results import PricingResult
 from .grid import build_spot_grid
-from .operators import CrankNicolsonStepper, build_stepper
+from .operators import CrankNicolsonStepper, build_stepper, build_variable_stepper
 
 
 def support_matrix() -> dict[str, tuple[str, ...]]:
@@ -148,15 +149,27 @@ def _apply_events(
 
 
 def _deterministic_price(
-    product: StructuredNote, market: MarketData, config: PDEConfig
+    product: StructuredNote, market: MarketData, config: PDEConfig,
+    model: PricingModel | None = None,
 ) -> PricingResult:
     times = np.arange(product.maturity_days + 1, dtype=float) / product.day_count
-    path = (
-        market.spots[0]
-        * np.exp((market.rate - market.dividend_yields[0]) * times)
-    )[:, None]
+    if model is None:
+        path = (market.spots[0]
+                * np.exp((market.rate - market.dividend_yields[0]) * times))[:, None]
+    else:
+        path = (market.spots[0]*np.asarray([model.forward_growth(0., float(t)) for t in times]))[:, None]
+        if np.any(~np.isfinite(path)) or np.any(path <= 0):
+            raise ValueError('deterministic model path must be finite and positive')
     evaluation = evaluate_path(path, product)
-    value = evaluation.present_value(market.rate, product.day_count)
+    if model is None:
+        value = evaluation.present_value(market.rate, product.day_count)
+    else:
+        value = 0.
+        for cash in evaluation.cashflows:
+            discount = float(model.discount(cash.day/product.day_count))
+            if not np.isfinite(discount) or discount <= 0:
+                raise ValueError('model cash discount must be finite and positive')
+            value += cash.amount*discount
     return PricingResult(
         method="pde",
         present_value=value,
@@ -164,6 +177,7 @@ def _deterministic_price(
         diagnostics={
             "deterministic_zero_volatility": True,
             "spot_grid_points": config.spot_grid_points,
+            "model": {"kind": "flat_market", "time_offset": 0.} if model is None else model.diagnostics(),
         },
         warnings=("deterministic zero-volatility shortcut",),
     )
@@ -173,9 +187,16 @@ def price_pde(
     product: StructuredNote,
     market: MarketData,
     config: PDEConfig,
+    *,
+    model: PricingModel | None = None,
 ) -> PricingResult:
     _validate(product, market)
-    if market.volatilities[0] == 0:
+    if model is not None:
+        validate_model(model, product, market)
+        deterministic = getattr(model, 'is_deterministic', None)
+        if deterministic is not None and deterministic(product.maturity_years):
+            return _deterministic_price(product, market, config, model)
+    if model is None and market.volatilities[0] == 0:
         return _deterministic_price(product, market, config)
 
     grid = build_spot_grid(product, market, config)
@@ -183,7 +204,23 @@ def price_pde(
     regular_dt = 1.0 / (product.day_count * config.time_steps_per_day)
     cache: dict[tuple[float, float], CrankNicolsonStepper] = {}
 
-    def step(values: np.ndarray, dt: float, theta: float) -> np.ndarray:
+    def step(values: np.ndarray, dt: float, theta: float, start: float) -> np.ndarray:
+        if model is not None:
+            end = start+dt
+            start_discount, end_discount = float(model.discount(start)), float(model.discount(end))
+            growth = float(model.forward_growth(start, end))
+            if (not np.all(np.isfinite((start_discount, end_discount, growth)))
+                    or min(start_discount, end_discount, growth) <= 0):
+                raise ValueError('model interval discount and growth must be finite and positive')
+            discount = end_discount/start_discount
+            if not np.isfinite(discount) or discount <= 0:
+                raise ValueError('model interval discount must be finite and positive')
+            operator = build_variable_stepper(grid, rate=-np.log(discount)/dt,
+                carry=np.log(growth)/dt,
+                volatility=checked_local_vol(model, start+dt/2, grid[1:-1]), dt=dt, theta=theta)
+            # Build once at this chronological interval and solve both KI states.
+            # No time-independent cache is used for time-dependent coefficients.
+            return operator.step(values)
         key = (dt, theta)
         if key not in cache:
             cache[key] = build_stepper(
@@ -200,17 +237,24 @@ def price_pde(
     if product.autocall:
         discontinuities.update(product.autocall.observation_days)
     discontinuities.update(product.coupon.payment_days)
+    if model is not None and product.knock_in:
+        discontinuities.update(range(product.knock_in.monitoring_start_day, product.maturity_days+1))
 
     for day in range(product.maturity_days - 1, -1, -1):
         for substep in range(config.time_steps_per_day):
+            end = (day+1)/product.day_count-substep*regular_dt
+            start = end-regular_dt
+            if day == 0 and substep == config.time_steps_per_day-1:
+                start = 0.  # avoid a negative rounding residue at the market origin
             first_after_event = substep == 0 and day + 1 in discontinuities
             if config.rannacher_smoothing and first_after_event:
                 half_dt = regular_dt / 2.0
-                not_ki = step(step(not_ki, half_dt, 1.0), half_dt, 1.0)
-                ki = step(step(ki, half_dt, 1.0), half_dt, 1.0)
+                states = np.column_stack((not_ki, ki))
+                states = step(step(states, half_dt, 1.0, start+half_dt), half_dt, 1.0, start)
+                not_ki, ki = states[:, 0], states[:, 1]
             else:
-                not_ki = step(not_ki, regular_dt, config.theta)
-                ki = step(ki, regular_dt, config.theta)
+                states = step(np.column_stack((not_ki, ki)), regular_dt, config.theta, start)
+                not_ki, ki = states[:, 0], states[:, 1]
         if day > 0:
             not_ki, ki = _apply_events(product, grid, day, not_ki, ki)
 
@@ -236,5 +280,7 @@ def price_pde(
                 if product.knock_in and product.knock_in.initially_knocked_in
                 else "not_knocked_in"
             ),
+            "model": {"kind": "flat_market", "time_offset": 0.} if model is None else model.diagnostics(),
+            "coefficient_time": 'interval midpoint',
         },
     )

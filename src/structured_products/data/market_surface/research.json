@@ -1,0 +1,7 @@
+{
+  "title": "Synthetic SSVI market surface: risk, stress and note terms",
+  "pde": {"spot_grid_points": 201, "time_steps_per_day": 1, "spot_grid_upper": 500.0},
+  "mc": {"n_paths": 20000, "seed": 7, "steps_per_day": 2},
+  "validation": true,
+  "mc_checkpoints": [{"spot": 79.5}, {"spot": 80.5}, {"spot": 99.5}, {"spot": 100.5}, {"spot": 110.0}]
+}

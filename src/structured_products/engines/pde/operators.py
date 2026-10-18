@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
-from scipy.sparse import csc_matrix, lil_matrix
+from scipy.sparse import csc_matrix, lil_matrix, diags
 from scipy.sparse.linalg import SuperLU, splu
 
 
@@ -59,3 +59,28 @@ def build_stepper(
 
     left_csc = csc_matrix(left)
     return CrankNicolsonStepper(splu(left_csc), csc_matrix(right))
+
+
+def build_variable_stepper(grid, *, rate, carry, volatility, dt, theta):
+    """Vectorized interior operator; identical boundary equations to the flat solver."""
+    size = len(grid)
+    spacing = grid[1]-grid[0]
+    spots = grid[1:-1]
+    variance = .5*np.asarray(volatility)**2*spots**2/spacing**2
+    drift = carry*spots/(2*spacing)
+    lower, diagonal, upper = variance-drift, -2*variance-rate, variance+drift
+
+    lo, diag, hi = np.zeros(size-1), np.zeros(size), np.zeros(size-1)
+    weight = -theta*dt
+    lo[:-1], diag[1:-1], hi[1:] = weight*lower, 1+weight*diagonal, weight*upper
+    diag[0], hi[0] = 1., -1.
+    lo[-1], diag[-1] = -2., 1.
+    edge = np.zeros(size-2)
+    edge[-1] = 1.
+    left = diags((edge, lo, diag, hi), (-2, -1, 0, 1), format='csc')
+    # Identity belongs only to interior rows; right boundary rows remain zero.
+    lo, diag, hi = np.zeros(size-1), np.zeros(size), np.zeros(size-1)
+    weight = (1-theta)*dt
+    lo[:-1], diag[1:-1], hi[1:] = weight*lower, 1+weight*diagonal, weight*upper
+    right = diags((lo, diag, hi), (-1, 0, 1), format='csc')
+    return CrankNicolsonStepper(splu(left), right)

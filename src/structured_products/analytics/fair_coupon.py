@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from math import isfinite
 import sys
 
 from scipy.optimize import brentq
@@ -10,14 +11,15 @@ from scipy.optimize import brentq
 from ..config import MCConfig, PDEConfig
 from ..enums import CouponRule, PricingMethod
 from ..market import MarketData
+from ..models import PricingModel
 from ..pricing import price
 from ..products import StructuredNote
 from ..results import FairCouponResult
 
 
 def with_flat_coupon(product: StructuredNote, coupon_rate: float) -> StructuredNote:
-    if coupon_rate < 0:
-        raise ValueError("coupon rate cannot be negative")
+    if not isfinite(coupon_rate) or coupon_rate < 0:
+        raise ValueError("coupon rate must be finite and nonnegative")
     coupon = product.coupon
     autocall = product.autocall
     if coupon.rule is CouponRule.FIXED_PERIODIC:
@@ -46,6 +48,7 @@ def solve_fair_coupon(
     *,
     max_iterations: int = 100,
     tolerance: float = 1.0e-8,
+    model: PricingModel | None = None,
 ) -> FairCouponResult:
     if lower_coupon < 0 or upper_coupon <= lower_coupon:
         raise ValueError("coupon bracket must satisfy 0 <= lower < upper")
@@ -53,7 +56,7 @@ def solve_fair_coupon(
 
     def objective(rate: float) -> float:
         candidate = with_flat_coupon(product, rate)
-        return price(candidate, market, selected, engine_config).present_value - target_pv
+        return price(candidate, market, selected, engine_config, model=model).present_value - target_pv
 
     lower_value = objective(lower_coupon)
     upper_value = objective(upper_coupon)

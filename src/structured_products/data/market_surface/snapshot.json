@@ -1,0 +1,15 @@
+{
+  "symbol": "SYNTH",
+  "spot": 100.0,
+  "currency": "USD",
+  "price_unit": "index_points",
+  "timestamp": "2026-01-02T21:00:00+00:00",
+  "settlement_convention": "PM",
+  "provenance": {
+    "kind": "synthetic",
+    "source": "tools/generate_synthetic_surface.py",
+    "calendar": "synthetic weekdays; holidays deliberately not modeled",
+    "real_data_acceptance": "pending"
+  },
+  "day_count": "ACT/252"
+}

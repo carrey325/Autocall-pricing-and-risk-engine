@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from math import exp
+from typing import Callable
 
 import numpy as np
 
@@ -142,9 +143,11 @@ def evaluate_path(path: np.ndarray, product: StructuredNote) -> PathEvaluation:
 class VectorizedPayoffState:
     """Streaming payoff state shared by deterministic and MC path evaluation."""
 
-    def __init__(self, product: StructuredNote, n_paths: int, rate: float) -> None:
+    def __init__(self, product: StructuredNote, n_paths: int, rate: float,
+                 *, discount: Callable[[float], float] | None = None) -> None:
         self.product = product
         self.rate = rate
+        self.discount = discount
         self.present_values = np.zeros(n_paths, dtype=float)
         self.coupon_cashflows = np.zeros(n_paths, dtype=float)
         self.alive = np.ones(n_paths, dtype=bool)
@@ -162,6 +165,11 @@ class VectorizedPayoffState:
         }
 
     def _discount(self, day: int) -> float:
+        if self.discount is not None:
+            value = float(self.discount(day / self.product.day_count))
+            if not np.isfinite(value) or value <= 0:
+                raise ValueError('discount must be finite and positive')
+            return value
         return exp(-self.rate * day / self.product.day_count)
 
     def _knock_in(self, day: int, performance: np.ndarray) -> None:

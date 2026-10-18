@@ -29,6 +29,8 @@ htmlcov/
 *.ipynb
 /old/
 results/
+.superpowers/
+/.pytest_research_check/
 
 # OS and editor files
 .DS_Store
