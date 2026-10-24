@@ -43,9 +43,26 @@ Monte Carlo simulates correlated risk-neutral paths with Philox streams,
 antithetic variates, and daily streaming payoff state. A fixed seed identifies
 the same innovations for pricing, fair-coupon trials, and Greek bumps.
 
+For antithetic paths ordered as `base` then `-base`, uncertainty is estimated
+from `Y_i = (PV_i + PV_(i+N/2)) / 2`: `SE = std(Y, ddof=1) / sqrt(N/2)`.
+PV remains the mean of all path PVs. Ordinary MC uses the iid path formula.
+One independent pair cannot estimate SE: both SE and CI are absent and a
+warning is returned. Odd antithetic path counts remain invalid. CIs use the
+existing normal approximation, without a small-sample coverage guarantee.
+
 The PDE engine solves two value states (alive/not knocked in and alive/knocked
 in) backward on a one-dimensional spot grid. It applies generic KI, KO, coupon,
 and maturity transforms on exact event days. Multi-asset PDE pricing is rejected.
+
+At the absorbing GBM endpoint `S=0`, each state's continuation value propagates
+as `V_new(0) = exp(-r*dt) * V_old(0)` between events. The same terminal and daily
+event transforms determine boundary cashflows, coupon eligibility, and KI timing.
+Each Rannacher half-step uses its own `dt`; events occur only at integer days,
+and day zero is not monitored. The upper edge retains zero gamma.
+After KI the zero-spot principal is `notional * max(floor, 1-participation)`
+when principal is included. Without KI it is the full notional; future KI can
+change that state only on an eligible monitoring day. Zero spot is not a
+zero-Delta condition.
 
 ## Valuation-time risk
 

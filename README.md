@@ -28,12 +28,14 @@ Crank–Nicolson PDE benchmark for single-asset products.
 - Correlated risk-neutral GBM paths for single- and multi-asset products.
 - Philox random streams, fixed-seed reproducibility, and antithetic variates.
 - Batch-size-invariant simulations for stable fair-coupon and Greek calculations.
+- Standard errors from independent antithetic pair means; ordinary MC uses iid paths.
 
 **Crank–Nicolson PDE**
 
 - Independent two-state knocked-in / not-knocked-in valuation.
 - Exact application of knock-in, autocall, coupon, and maturity events.
 - One-dimensional benchmark for supported single-asset products.
+- State-dependent cashflows at the absorbing zero-spot endpoint, discounted between events.
 
 ## Numerical Validation
 
@@ -42,16 +44,26 @@ and CI across Python 3.10–3.13. Tests cover hand-calculated payoff paths, barr
 same-day event rules, Monte Carlo reproducibility, PDE grid refinement, and
 cross-engine comparisons.
 
-For the benchmark classic Snowball on a 1,000 notional:
+For the benchmark classic Snowball on a 1,000 notional (2026-10-24 run,
+numerical code at `6278ed2`, built-in `classic_snowball`, seed 7, 20,000
+antithetic paths, 401 PDE grid points, one time step per day):
 
 | Method | Present Value |
 | --- | ---: |
 | Monte Carlo | 1000.693524 |
 | PDE | 1000.487825 |
 
-The difference is approximately **2.06 basis points**, with the PDE estimate
-inside the Monte Carlo 95% confidence interval. See
+The pair-based MC SE is **0.698839**, with 95% CI **[999.323825, 1002.063223]**.
+The difference is approximately **2.06 basis points of notional**, with the PDE
+estimate inside that interval. This is a cross-engine difference, not a bound
+on error against a known true value. See
 [VALIDATION.md](VALIDATION.md) for the methodology and full numerical results.
+
+With only two antithetic paths (one independent pair), pricing remains available,
+but SE and CI are `None` (`null` in JSON), with a warning. Normal-approximation
+intervals do not guarantee small-sample coverage. When CI is absent, the existing
+`compare` field `pde_inside_mc_confidence_interval: false` means membership was
+not verified; it is not a rejection of cross-engine consistency.
 
 ## Quick Start
 
