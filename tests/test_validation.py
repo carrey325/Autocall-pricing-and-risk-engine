@@ -149,6 +149,19 @@ def test_invalid_engine_configs_fail(factory) -> None:
         factory()
 
 
+@pytest.mark.parametrize("antithetic", [True, False])
+@pytest.mark.parametrize("n_paths", [-1, 0, 1])
+def test_mc_rejects_fewer_than_two_paths(antithetic, n_paths):
+    with pytest.raises(ValueError):
+        MCConfig(n_paths=n_paths, antithetic=antithetic)
+
+
+@pytest.mark.parametrize("n_paths,antithetic", [(2, True), (4, True), (2, False), (3, False)])
+def test_mc_accepts_supported_small_sample_configs(n_paths, antithetic):
+    config = MCConfig(n_paths=n_paths, antithetic=antithetic)
+    assert config.n_paths == n_paths
+
+
 def test_schedule_edge_cases() -> None:
     with pytest.raises(ValueError):
         monthly_observation_days(0)

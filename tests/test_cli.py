@@ -111,3 +111,19 @@ def test_price_only_opt_out_accepts_zero_volatility(short_config, capsys):
     result = json.loads(capsys.readouterr().out)
     assert "greeks" not in result
     assert result["price"]["present_value"] > 0
+
+
+@pytest.mark.parametrize("command", ["price", "compare"])
+def test_one_pair_cli_preserves_unknown_uncertainty(capsys, command):
+    arguments = [command, "--example", "classic_snowball", "--paths", "2"]
+    if command == "price":
+        arguments.append("--no-greeks")
+    assert main(arguments) == 0
+    payload = json.loads(capsys.readouterr().out)
+    valuation = payload["price" if command == "price" else "mc"]
+    assert valuation["standard_error"] is None
+    assert valuation["confidence_interval"] is None
+    assert valuation["warnings"]
+    json.dumps(payload, allow_nan=False)
+    if command == "compare":
+        assert payload["comparison"]["pde_inside_mc_confidence_interval"] is False

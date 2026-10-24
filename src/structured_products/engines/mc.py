@@ -31,6 +31,17 @@ def _daily_independent_normals(
     return base
 
 
+def _estimate_standard_error(values: np.ndarray, *, antithetic: bool) -> float | None:
+    """Estimate uncertainty from independent paths or antithetic pair means."""
+    if antithetic:
+        half = len(values) // 2
+        # The generator concatenates base and -base, pairing matching half indices.
+        values = (values[:half] + values[half:]) / 2.0
+    if len(values) < 2:
+        return None
+    return float(np.std(values, ddof=1) / sqrt(len(values)))
+
+
 def price_mc(
     product: StructuredNote,
     market: MarketData,
@@ -69,13 +80,17 @@ def price_mc(
     evaluation = state.result()
     values = evaluation.present_values
     present_value = float(np.mean(values))
-    standard_error = float(np.std(values, ddof=1) / sqrt(config.n_paths))
-    quantile = NormalDist().inv_cdf(0.5 + config.confidence_level / 2.0)
-    confidence_interval = (
-        present_value - quantile * standard_error,
-        present_value + quantile * standard_error,
-    )
+    standard_error = _estimate_standard_error(values, antithetic=config.antithetic)
+    confidence_interval = None
     warnings: list[str] = []
+    if standard_error is None:
+        warnings.append("one independent antithetic pair; standard error cannot be estimated")
+    else:
+        quantile = NormalDist().inv_cdf(0.5 + config.confidence_level / 2.0)
+        confidence_interval = (
+            present_value - quantile * standard_error,
+            present_value + quantile * standard_error,
+        )
     if np.all(volatilities == 0):
         warnings.append("deterministic zero-volatility market")
     return PricingResult(
