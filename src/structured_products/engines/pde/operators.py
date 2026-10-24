@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import exp
 
 import numpy as np
 from scipy.sparse import csc_matrix, lil_matrix
@@ -13,10 +14,11 @@ from scipy.sparse.linalg import SuperLU, splu
 class CrankNicolsonStepper:
     left_factor: SuperLU
     right: csc_matrix
+    lower_discount_factor: float
 
     def step(self, values: np.ndarray) -> np.ndarray:
         rhs = self.right @ values
-        rhs[0] = 0.0
+        rhs[0] = values[0] * self.lower_discount_factor
         rhs[-1] = 0.0
         return self.left_factor.solve(rhs)
 
@@ -35,9 +37,9 @@ def build_stepper(
     left = lil_matrix((size, size), dtype=float)
     right = lil_matrix((size, size), dtype=float)
 
-    # S=0 is absorbing (zero delta); the distant upper edge uses zero gamma.
+    # At absorbing S=0, discount each state's continuation value between events.
+    # The distant upper edge uses zero gamma.
     left[0, 0] = 1.0
-    left[0, 1] = -1.0
     left[-1, -3] = 1.0
     left[-1, -2] = -2.0
     left[-1, -1] = 1.0
@@ -58,4 +60,4 @@ def build_stepper(
         right[index, index + 1] = (1.0 - theta) * dt * upper
 
     left_csc = csc_matrix(left)
-    return CrankNicolsonStepper(splu(left_csc), csc_matrix(right))
+    return CrankNicolsonStepper(splu(left_csc), csc_matrix(right), exp(-rate * dt))
