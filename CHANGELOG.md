@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — 2026-10-24
+
+- Estimate antithetic MC standard errors from independent pair means while
+  preserving path PVs, random streams, and batch invariance. A single pair
+  returns absent SE/CI with a warning, including in CLI JSON.
+- Discount state continuation values at the absorbing zero-spot PDE boundary.
+  Preserve existing terminal/daily events, upper boundary, and public APIs.
+- Add independent low-spot price/Delta and boundary cashflow regressions, plus
+  finite grid, time, domain, and bump diagnostics with reproducible settings.
+
 ## 0.3.0rc1 — 2026-09-29
 
 - Integrate the extended Greeks branch into the pricing and risk API:
